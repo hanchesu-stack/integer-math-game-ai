@@ -512,24 +512,50 @@ function aiGenerate(){
   if(!req){document.getElementById('ai-status').textContent='請輸入你想練習的內容';return}
   document.getElementById('ai-status').textContent='🤖 AI 老師出題中...';
   document.getElementById('ai-result').textContent='';
-  callAI({action:'generate',userRequest:req},function(res){
-    document.getElementById('ai-status').textContent='';
-    if(res.levels&&res.levels.length>=1){
-      GS.customLevels=res;
-      var lines=[];
-      for(var i=0;i<res.levels.length;i++){
-        var lv=res.levels[i];
-        lvNames[i]=lv.name||('第'+(i+1)+'關');
-        lines.push((i+1)+'. '+lvNames[i]+(lv.prompt?'：'+lv.prompt:''));
-      }
-      // Pad to 4 levels
-      while(lvNames.length<4)lvNames.push('第'+(lvNames.length+1)+'關');
-      while((res.levels).length<4)res.levels.push({nums:[-20,20],ops:'both'});
-      document.getElementById('ai-result').innerHTML='✅ AI 已出題！<br>'+lines.join('<br>');
+  // === Keyword parser: determine ops and nums ===
+  var kw=req.toLowerCase();
+  var wantNeg=kw.indexOf('負')>=0||kw.indexOf('-')>=0;
+  var wantPos=kw.indexOf('正')>=0||(kw.indexOf('加')>=0&&!wantNeg);
+  var wantAdd=kw.indexOf('加')>=0;
+  var wantSub=kw.indexOf('減')>=0;
+  var wantBig=kw.indexOf('大')>=0||kw.indexOf('難')>=0;
+  // Determine nums range
+  var baseMn=wantNeg?-20:1,baseMx=wantNeg?(wantPos?20:-1):20;
+  if(wantBig){baseMn=wantNeg?-50:1;baseMx=wantNeg?(wantPos?50:-1):50;}
+  // Determine ops
+  var ops='both';
+  if(wantAdd&&!wantSub)ops='add_same';
+  else if(wantSub&&!wantAdd)ops='sub_same';
+  // Generate 4 levels with progressive difficulty
+  var levels=[];
+  var step=Math.ceil((baseMx-baseMn)/4)||5;
+  for(var l=0;l<4;l++){
+    var mn2=baseMn, mx2=Math.min(baseMn+(l+1)*step,baseMx);
+    var lvName='',lvPrompt='';
+    if(wantAdd&&!wantSub){
+      lvName='第'+(l+1)+'關：加法練習';
+      lvPrompt='數字範圍 '+mn2+'~'+mx2;
+    }else if(wantSub&&!wantAdd){
+      lvName='第'+(l+1)+'關：減法練習';
+      lvPrompt='數字範圍 '+mn2+'~'+mx2;
     }else{
-      document.getElementById('ai-result').textContent='AI 無法理解，請換個說法再試試';
+      lvName='第'+(l+1)+'關：綜合練習';
+      lvPrompt='數字範圍 '+mn2+'~'+mx2;
     }
-  });
+    levels.push({name:lvName,prompt:lvPrompt,nums:[mn2,mx2],ops:ops});
+  }
+  // Set AI-generated levels
+  GS.customLevels={levels:levels};
+  for(var l2=0;l2<levels.length;l2++){
+    lvNames[l2]=levels[l2].name;
+  }
+  while(lvNames.length<4)lvNames.push('第'+(lvNames.length+1)+'關');
+  while(levels.length<4)levels.push({nums:[baseMn,baseMx],ops:ops});
+  var lines=[];
+  for(var l3=0;l3<4;l3++){
+    lines.push((l3+1)+'. '+levels[l3].name+' ['+levels[l3].nums[0]+','+levels[l3].nums[1]+'] '+levels[l3].ops);
+  }
+  document.getElementById('ai-result').innerHTML='<span style="color:#00ff88">✅ AI 出題成功</span><br>'+lines.join('<br>');
 }
 
 // === Timer ===
