@@ -591,8 +591,9 @@ function startGame(){
   if(!c){alert('請輸入姓名');return}if(!d){alert('請輸入 E-mail');return}
   GS.cls=a;GS.seat=b;GS.name=c;GS.email=d;
   GS.lv=1;GS.qn=1;GS.lvs=[0,0,0,0];GS.total=0;GS.sec=0;GS.fire=1;GS.phaseNext='';treasures=[];
-  GS.customLevels=null;
-  lvNames=['第一關：同號數相加','第二關：異號數相加','第三關：同號數相減','第四關：異號數相減'];
+  if(!GS.customLevels){
+    lvNames=['第一關：同號數相加','第二關：異號數相加','第三關：同號數相減','第四關：異號數相減'];
+  }
   document.getElementById('hud-score').textContent='0';
   document.getElementById('hud-time').textContent='00:00';
   document.getElementById('hud-fire').textContent='Lv1';
