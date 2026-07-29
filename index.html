@@ -400,11 +400,11 @@ function hitEnemy(idx,e){
 function showWrongAnswer(chosenVal){
   var mo=document.getElementById('msg-overlay');
   var problem=GS.prob.q,correct=GS.prob.a;
-  mo.innerHTML='<div style="font-size:20px;margin-bottom:10px">❌ 答錯了！</div>'+
-    '<div style="font-size:18px;margin-bottom:8px;color:#fff">'+esc(problem)+'</div>'+
-    '<div style="font-size:14px;margin-bottom:6px">你選了 <b style="color:#ff6666">'+chosenVal+'</b>　正確 <b style="color:#00ff88">'+correct+'</b></div>'+
-    '<div id="ai-tip" style="font-size:13px;color:#aff;margin-top:8px;line-height:1.6">🤖 AI 老師思考中...</div>'+
-    '<button id="btn-continue" style="margin-top:16px;padding:12px 48px;font-family:inherit;font-size:15px;background:#e60012;color:#f8f8f8;border:2px solid #fcd000;cursor:pointer" onclick="hideWrongOverlay();onPhaseEnd()">繼續 ▶</button>';
+  mo.innerHTML='<div style="font-size:22px;margin-bottom:12px">❌ 答錯了！</div>'+
+    '<div style="font-size:22px;margin-bottom:10px;color:#fff">'+esc(problem)+'</div>'+
+    '<div style="font-size:18px;margin-bottom:8px">你選了 <b style="color:#ff6666">'+chosenVal+'</b>　正確 <b style="color:#00ff88">'+correct+'</b></div>'+
+    '<div id="ai-tip" style="font-size:16px;color:#aff;margin-top:10px;line-height:1.7">🤖 AI 老師思考中...</div>'+
+    '<button id="btn-continue" style="margin-top:20px;padding:12px 56px;font-family:inherit;font-size:16px;background:#e60012;color:#f8f8f8;border:2px solid #fcd000;cursor:pointer;border-radius:4px" onclick="hideWrongOverlay();onPhaseEnd()">繼續 ▶</button>';
   mo.style.display='block';
   mo.style.pointerEvents='auto';
   mo.style.background='rgba(0,0,0,0.9)';
@@ -480,6 +480,7 @@ function startRound(){
   GS.prob=genProblem(GS.lv);
   var avals=genAnswers(GS.prob.a);
   spawnEnemies(avals);
+  bullets=[];
   document.getElementById('hud-q').textContent=GS.qn+'/5';
   document.getElementById('question-bar').textContent=GS.prob.q;
   GS.active=true;
