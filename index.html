@@ -389,9 +389,11 @@ function hitEnemy(idx,e){
     var row={class_name:GS.cls,seat_number:GS.seat,student_name:GS.name,email:GS.email,score:GS.total,level1_score:GS.lvs[0],level2_score:GS.lvs[1],level3_score:GS.lvs[2],level4_score:GS.lvs[3],game_time_seconds:GS.sec};
     sbInsert(row);
     GS.active=false;GS.pmsg='✅ 命中！';GS.ptimer=45;
+    bullets=[];
     hideWrongOverlay();
   }else{
     GS.active=false;
+    bullets=[];
     showWrongAnswer(e.val);
   }
 }
@@ -403,7 +405,7 @@ function showWrongAnswer(chosenVal){
   mo.innerHTML='<div style="font-size:22px;margin-bottom:12px">❌ 答錯了！</div>'+
     '<div style="font-size:22px;margin-bottom:10px;color:#fff">'+esc(problem)+'</div>'+
     '<div style="font-size:18px;margin-bottom:8px">你選了 <b style="color:#ff6666">'+chosenVal+'</b>　正確 <b style="color:#00ff88">'+correct+'</b></div>'+
-    '<div id="ai-tip" style="font-size:16px;color:#aff;margin-top:10px;line-height:1.7">🤖 AI 老師思考中...</div>'+
+    '<div id="ai-tip" style="font-size:20px;color:#aff;margin-top:10px;line-height:1.7">🤖 AI 老師思考中...</div>'+
     '<button id="btn-continue" style="margin-top:20px;padding:12px 56px;font-family:inherit;font-size:16px;background:#e60012;color:#f8f8f8;border:2px solid #fcd000;cursor:pointer;border-radius:4px" onclick="hideWrongOverlay();onPhaseEnd()">繼續 ▶</button>';
   mo.style.display='block';
   mo.style.pointerEvents='auto';
@@ -425,7 +427,7 @@ function showWrongAnswer(chosenVal){
   var lvlName=lvNames[GS.lv-1];
   callAI({action:'explain',problem:problem,chosenAnswer:chosenVal,correctAnswer:correct,levelName:lvlName},function(res){
     var tip=document.getElementById('ai-tip');
-    if(tip)tip.innerHTML='<span style="color:#00ff88">🤖 '+esc(res.text||'')+'</span>';
+    if(tip)tip.innerHTML='<span style="color:#00ff88;font-size:20px">🤖 '+esc(res.text||'')+'</span>';
   });
 }
 function hideWrongOverlay(){
@@ -449,6 +451,7 @@ function hideWrongOverlay(){
 
 function onPhaseEnd(){
   GS.pmsg='';
+  bullets=[];
   hideWrongOverlay();
   if(GS.phaseNext==='level'){
     GS.phaseNext='';
