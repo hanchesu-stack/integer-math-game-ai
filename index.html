@@ -42,11 +42,11 @@ canvas{display:block;width:100%;height:100%;background:#000}
   padding:20px;text-align:center;
 }
 #ai-overlay.show{display:flex}
-#ai-overlay .ai-title{font-size:18px;color:#fcd000;margin-bottom:12px}
-#ai-overlay .ai-body{font-size:14px;color:#f8f8f8;max-width:380px;line-height:1.8;margin-bottom:16px}
-#ai-overlay .ai-spinner{font-size:12px;color:#888;margin-bottom:8px}
+#ai-overlay .ai-title{font-size:20px;color:#fcd000;margin-bottom:16px;text-shadow:2px 2px 0 #000}
+#ai-overlay .ai-body{font-size:16px;color:#f8f8f8;max-width:420px;line-height:1.8;margin-bottom:20px;background:rgba(0,0,0,0.6);padding:16px;border:1px solid #333}
+#ai-overlay .ai-spinner{font-size:14px;color:#00ff88;margin-bottom:12px}
 #ai-overlay .ai-btn{
-  padding:10px 40px;font-family:inherit;font-size:13px;
+  padding:12px 48px;font-family:inherit;font-size:15px;
   background:#e60012;color:#f8f8f8;border:2px solid #fcd000;cursor:pointer;
 }
 #panel{
@@ -152,7 +152,7 @@ canvas{display:block;width:100%;height:100%;background:#000}
         <div id="ai-status"></div>
         <div id="ai-result"></div>
       </div>
-      <div style="font-size:9px;color:#444;text-align:center;margin-top:8px">v1.2</div>
+      <div style="font-size:9px;color:#444;text-align:center;margin-top:8px">v1.3</div>
       <button class="btn btn-start" onclick="startGame()">🔥 出擊！</button>
     </div>
     <div id="panel-result" class="hidden">
@@ -366,7 +366,9 @@ function update(){
     if(e.hit){e.alive=false;continue}
     if(e.y>840){e.alive=false}
   }
+  // Bullet collision: stop after first hit to avoid multi-hit confusion
   for(var i=bullets.length-1;i>=0;i--){
+    if(!GS.active)break;
     bullets[i].y-=8;
     if(bullets[i].y<-20){bullets.splice(i,1);continue}
     for(var j=0;j<enemies.length;j++){
@@ -405,10 +407,11 @@ function hitEnemy(idx,e){
 function showAIExplain(problem,chosen,correct,levelName){
   var overlay=document.getElementById('ai-overlay');
   if(!overlay){console.warn('ai-overlay not found');onPhaseEnd();return}
-  document.getElementById('ai-title').textContent='❌ 答錯了！';
-  var body='<div style="font-size:18px;color:#fcd000;margin-bottom:12px">'+esc(problem)+'</div>';
-  body+='<div style="font-size:12px;color:#888;margin-bottom:4px">你選了：<span style="color:#ff6666">'+chosen+'</span>　正確：<span style="color:#00ff88">'+correct+'</span></div>';
-  body+='<div id="ai-explain-text" style="margin-top:8px;color:#f8f8f8;line-height:1.6"></div>';
+  document.getElementById('ai-title').textContent='❌ 答錯了！AI 老師來幫你';
+  var body='<div style="font-size:20px;color:#fcd000;margin-bottom:16px">'+esc(problem)+'</div>';
+  body+='<div style="font-size:14px;color:#ccc;margin-bottom:12px">你選了：<span style="color:#ff6666;font-size:18px">'+chosen+'</span>　正確答案：<span style="color:#00ff88;font-size:18px">'+correct+'</span></div>';
+  body+='<div style="font-size:12px;color:#888;margin-bottom:4px">🤖 AI 解釋：</div>';
+  body+='<div id="ai-explain-text" style="margin-top:4px;color:#f8f8f8;font-size:16px;line-height:1.6;min-height:24px"></div>';
   document.getElementById('ai-body').innerHTML=body;
   document.getElementById('ai-spinner').style.display='block';
   document.getElementById('ai-dismiss').style.display='none';
@@ -552,9 +555,8 @@ function startGame(){
   if(!c){alert('請輸入姓名');return}if(!d){alert('請輸入 E-mail');return}
   GS.cls=a;GS.seat=b;GS.name=c;GS.email=d;
   GS.lv=1;GS.qn=1;GS.lvs=[0,0,0,0];GS.total=0;GS.sec=0;GS.fire=1;GS.phaseNext='';treasures=[];
-  if(!GS.customLevels){
-    lvNames=['第一關：同號數相加','第二關：異號數相加','第三關：同號數相減','第四關：異號數相減'];
-  }
+  GS.customLevels=null;
+  lvNames=['第一關：同號數相加','第二關：異號數相加','第三關：同號數相減','第四關：異號數相減'];
   document.getElementById('hud-score').textContent='0';
   document.getElementById('hud-time').textContent='00:00';
   document.getElementById('hud-fire').textContent='Lv1';
