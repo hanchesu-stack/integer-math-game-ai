@@ -209,6 +209,7 @@ function callAI(payload,cb){
 
 function dismissAI(){
   document.getElementById('ai-overlay').classList.remove('show');
+  onPhaseEnd();
 }
 
 // === Canvas ===
