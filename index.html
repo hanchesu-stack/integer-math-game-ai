@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>神鷹一號 AI - 智慧整數加減法射擊</title>
+<style>
+@font-face{font-family:'PressStart';src:local('Courier New')}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  background:#000;color:#f8f8f8;font-family:'PressStart','Courier New',monospace;
+  display:flex;justify-content:center;align-items:center;min-height:100vh;
+  overflow:hidden;user-select:none;-webkit-user-select:none;
+}
+#wrap{position:relative;width:100%;max-width:480px;height:100vh;max-height:800px}
+canvas{display:block;width:100%;height:100%;background:#000}
+#hud{
+  position:absolute;top:0;left:0;right:0;z-index:2;
+  display:flex;justify-content:space-between;padding:8px 12px;
+  font-size:14px;color:#fcd000;text-shadow:2px 2px 0 #000;
+  pointer-events:none;
+}
+#hud span{margin:0 4px}
+#question-bar{
+  position:absolute;top:36px;left:0;right:0;z-index:2;
+  text-align:center;font-size:24px;color:#f8f8f8;
+  text-shadow:2px 2px 0 #000;pointer-events:none;
+  padding:8px;background:rgba(0,0,0,0.6);
+}
+#msg-overlay{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:3;
+  font-size:16px;color:#fcd000;text-align:center;pointer-events:none;
+  text-shadow:3px 3px 0 #000;display:none;
+}
+#ai-overlay{
+  position:absolute;top:0;left:0;right:0;bottom:0;z-index:8;
+  background:rgba(0,0,0,0.85);display:none;
+  flex-direction:column;justify-content:center;align-items:center;
+  padding:20px;text-align:center;
+}
+#ai-overlay.show{display:flex}
+#ai-overlay .ai-title{font-size:18px;color:#fcd000;margin-bottom:12px}
+#ai-overlay .ai-body{font-size:14px;color:#f8f8f8;max-width:380px;line-height:1.8;margin-bottom:16px}
+#ai-overlay .ai-spinner{font-size:12px;color:#888;margin-bottom:8px}
+#ai-overlay .ai-btn{
+  padding:10px 40px;font-family:inherit;font-size:13px;
+  background:#e60012;color:#f8f8f8;border:2px solid #fcd000;cursor:pointer;
+}
+#panel{
+  position:absolute;top:0;left:0;right:0;bottom:0;z-index:10;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  background:#000;padding:20px;overflow-y:auto;
+}
+#panel.hidden{display:none}
+.panel-title{font-size:22px;color:#fcd000;text-align:center;margin-bottom:4px;text-shadow:3px 3px 0 #000}
+.panel-sub{font-size:11px;color:#e60012;text-align:center;margin-bottom:16px}
+.fgroup{margin-bottom:10px;width:100%;max-width:320px}
+.fgroup label{display:block;font-size:11px;color:#fcd000;margin-bottom:2px}
+.fgroup input{
+  width:100%;padding:10px 12px;border:2px solid #e60012;background:#111;color:#f8f8f8;
+  font-family:inherit;font-size:13px;outline:none
+}
+.fgroup input:focus{border-color:#fcd000}
+.fgroup textarea{
+  width:100%;padding:10px 12px;border:2px solid #e60012;background:#111;color:#f8f8f8;
+  font-family:inherit;font-size:13px;outline:none;resize:none;height:56px
+}
+.fgroup textarea:focus{border-color:#fcd000}
+.btn{
+  display:block;width:100%;max-width:320px;padding:12px;font-family:inherit;
+  font-size:13px;border:2px solid #e60012;cursor:pointer;transition:0.15s;
+  text-align:center;margin-top:8px;
+}
+.btn-start{background:#e60012;color:#f8f8f8;font-size:15px}
+.btn-start:hover{background:#ff2211}
+.btn-ai{background:#111;color:#00ff88;border-color:#00ff88;font-size:12px}
+.btn-ai:hover{background:#1a3a2a}
+.btn-restart{background:#111;color:#fcd000}
+.btn-restart:hover{background:#222}
+.res-line{text-align:center;margin:4px 0;font-size:13px}
+.res-big{font-size:26px;color:#fcd000;text-shadow:3px 3px 0 #e60012}
+.res-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;max-width:320px;margin:8px 0}
+.res-card{border:2px solid #333;padding:10px;text-align:center;background:#111}
+.res-card .lbl{font-size:10px;color:#888}.res-card .val{font-size:16px;color:#fcd000}
+.sel-msg{text-align:center;font-size:12px;color:#fcd000;margin:8px 0;line-height:1.6}
+.lb-table{width:100%;max-width:380px;border-collapse:collapse;font-size:10px;margin-top:8px}
+.lb-table th{background:#e60012;color:#f8f8f8;padding:4px;text-align:center}
+.lb-table td{padding:4px;text-align:center;border-bottom:1px solid #333;color:#ccc}
+.lb-table tr:nth-child(1) td{color:#fcd000}
+.lb-table tr:nth-child(2) td{color:#eee}
+.lb-table tr:nth-child(3) td{color:#ff8866}
+#ai-section{margin-top:4px;width:100%;max-width:320px}
+#ai-section .ai-hint{font-size:10px;color:#888;margin-bottom:4px;text-align:center}
+#ai-result{font-size:10px;color:#00ff88;text-align:center;margin:4px 0;line-height:1.6}
+#ai-status{font-size:10px;color:#888;text-align:center;margin:4px 0}
+
+#mobile-ctrl{
+  position:absolute;bottom:8px;left:50%;transform:translateX(-50%);z-index:5;
+  display:none;gap:8px;
+}
+.mbtn{
+  width:48px;height:48px;background:rgba(255,255,255,0.15);border:1px solid #fcd000;
+  color:#fcd000;font-size:20px;border-radius:8px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+}
+.mbtn:active{background:rgba(255,255,255,0.3)}
+#mfire{width:80px;font-size:14px;background:rgba(230,0,18,0.4);border-color:#e60012}
+@media(max-width:600px){#mobile-ctrl{display:flex}.panel-title{font-size:18px}}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div id="hud">
+    <div><span>⭐</span><span id="hud-score">0</span></div>
+    <div><span>🔥</span><span id="hud-fire">Lv1</span></div>
+    <div><span>⏱</span><span id="hud-time">00:00</span></div>
+    <div><span>🎯</span><span id="hud-q">1/5</span></div>
+  </div>
+  <div id="question-bar"></div>
+  <div id="msg-overlay"></div>
+  <div id="ai-overlay">
+    <div class="ai-title" id="ai-title">🤖 AI 小老師</div>
+    <div class="ai-spinner" id="ai-spinner">思考中...</div>
+    <div class="ai-body" id="ai-body"></div>
+    <button class="ai-btn" id="ai-dismiss" onclick="dismissAI()">繼續 ▶</button>
+  </div>
+
+  <div id="mobile-ctrl">
+    <button class="mbtn" id="mleft">◀</button>
+    <button class="mbtn" id="mdown">▼</button>
+    <button class="mbtn" id="mup">▲</button>
+    <button class="mbtn" id="mright">▶</button>
+    <button class="mbtn" id="mfire">🔥射擊</button>
+  </div>
+
+  <div id="panel">
+    <div id="panel-reg">
+      <div class="panel-title">🚀 神鷹一號 AI</div>
+      <div class="panel-sub">智慧整數加減法 射擊訓練</div>
+      <div class="fgroup"><label>班級</label><input id="reg-cls" placeholder="例如：701"></div>
+      <div class="fgroup"><label>座號</label><input type="number" id="reg-seat" placeholder="例如：5" min="1"></div>
+      <div class="fgroup"><label>姓名</label><input id="reg-name" placeholder="輸入你的姓名"></div>
+      <div class="fgroup"><label>E-mail</label><input type="email" id="reg-email" placeholder="收取成績單"></div>
+      <div id="ai-section">
+        <div class="ai-hint">🤖 AI 出題小老師：告訴 AI 你想練習什麼</div>
+        <textarea id="ai-request" placeholder="例如：我想練習負數減正數，數字大一點"></textarea>
+        <button class="btn btn-ai" onclick="aiGenerate()">🤖 AI 出題</button>
+        <div id="ai-status"></div>
+        <div id="ai-result"></div>
+      </div>
+      <button class="btn btn-start" onclick="startGame()">🔥 出擊！</button>
+    </div>
+    <div id="panel-result" class="hidden">
+      <div class="panel-title">🏆 任務結束</div>
+      <div id="sel-msg" class="sel-msg"></div>
+      <div class="res-big" id="total-score"></div>
+      <div class="res-line">⏱ 花費時間：<span id="total-time" style="color:#fcd000"></span></div>
+      <div class="res-grid" id="res-grid"></div>
+      <button class="btn btn-restart" onclick="restartGame()">🔄 再次出擊</button>
+      <div style="margin-top:12px;width:100%;max-width:380px;overflow-x:auto">
+        <table class="lb-table">
+          <thead><tr><th>排名</th><th>班級</th><th>姓名</th><th>分數</th><th>時間</th></tr></thead>
+          <tbody id="lb-body"><tr><td colspan="5">載入中...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// === Supabase ===
+var SB_URL='https://ceqnbiiwjhhbcenxpgdx.supabase.co';
+var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNlcW5iaWl3amhoYmNlbnhwZ2R4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyMTgwMzAsImV4cCI6MjEwMDc5NDAzMH0.opQ5qCPsek9HMgyxawQGawFk4ChIafjjFAy5U2nxZhk';
+var AI_URL=SB_URL+'/functions/v1/ai-tutor';
+
+function sbInsert(row){
+  fetch(SB_URL+'/rest/v1/game_scores_ai',{
+    method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify(row)
+  }).catch(function(){});
+}
+function sbSelect(cb){
+  fetch(SB_URL+'/rest/v1/game_scores_ai?select=student_name,class_name,score,game_time_seconds&order=score.desc,game_time_seconds.asc&limit=20',{
+    headers:{'apikey':SB_KEY}
+  }).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()})
+  .then(function(d){cb(d)})
+  .catch(function(e){cb([])});
+}
+function sendMail(p){
+  fetch('https://api.emailjs.com/api/v1.0/email/send',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({service_id:'service_ay6bwva',template_id:'template_venpsre',user_id:'WfsU3lC5UnYQy6B5h',template_params:p})
+  }).catch(function(){});
+}
+
+// === AI API ===
+function callAI(payload,cb){
+  document.getElementById('ai-spinner').style.display='block';
+  document.getElementById('ai-body').textContent='';
+  document.getElementById('ai-dismiss').style.display='none';
+  fetch(AI_URL,{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  }).then(function(r){return r.json()})
+  .then(function(d){cb(d)})
+  .catch(function(e){cb({text:'AI 老師暫時離線，請稍後再試！'})});
+}
+
+function dismissAI(){
+  document.getElementById('ai-overlay').classList.remove('show');
+}
+
+// === Canvas ===
+var cv=document.getElementById('c'),ctx=cv.getContext('2d');
+var W,H,scale;
+function resize(){
+  var wrap=document.getElementById('wrap');
+  W=wrap.clientWidth;H=wrap.clientHeight;
+  cv.width=W*cv.devicePixelRatio||W;cv.height=H*(cv.devicePixelRatio||1);
+  cv.style.width=W+'px';cv.style.height=H+'px';
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.scale(cv.devicePixelRatio||1,cv.devicePixelRatio||1);
+  scale=Math.min(W/480,H/800);
+}
+resize();window.addEventListener('resize',resize);
+
+// === Game State ===
+var GS={
+  cls:'',seat:0,name:'',email:'',
+  lv:1,qn:1,lvs:[0,0,0,0],total:0,sec:0,timer:null,
+  prob:null,answers:[],active:false,phase:'',pmsg:'',ptimer:0,
+  fire:1,
+  customLevels:null
+};
+
+// === Entities ===
+var player={x:240,y:700,w:20,h:28,speed:5,inv:0};
+var enemies=[],bullets=[],stars=[],particles=[],treasures=[];
+
+function resetPlayer(){player.x=240;player.y=700;player.inv=0;bullets=[];}
+function getFirepower(){return GS.fire;}
+
+// === Stars ===
+function initStars(){
+  stars=[];for(var i=0;i<80;i++)stars.push({x:Math.random()*480,y:Math.random()*800,s:1+Math.random()*2});
+}
+
+// === Answer generation ===
+function nz(mn,mx){var n;do{n=Math.floor(Math.random()*(mx-mn+1))+mn}while(n===0);return n}
+function genProblem(lv){
+  var c=GS.customLevels;
+  if(c){
+    var cl=c.levels[lv-1];
+    var mn=cl.nums?cl.nums[0]:-20,mx=cl.nums?cl.nums[1]:20;
+    var a=nz(mn,mx),b=nz(mn,mx),q,ans;
+    var op=cl.ops||'both';
+    if(op==='add_same'){b=Math.sign(a)*Math.abs(b);q='('+a+') + ('+b+')';ans=a+b}
+    else if(op==='add_diff'){b=-Math.sign(a)*Math.abs(b);q='('+a+') + ('+b+')';ans=a+b}
+    else if(op==='sub_same'){b=Math.sign(a)*Math.abs(b);q='('+a+') - ('+b+')';ans=a-b}
+    else if(op==='sub_diff'){b=-Math.sign(a)*Math.abs(b);q='('+a+') - ('+b+')';ans=a-b}
+    else{
+      var r=Math.random();
+      if(r<0.25){b=Math.sign(a)*Math.abs(b);q='('+a+') + ('+b+')';ans=a+b}
+      else if(r<0.5){b=-Math.sign(a)*Math.abs(b);q='('+a+') + ('+b+')';ans=a+b}
+      else if(r<0.75){b=Math.sign(a)*Math.abs(b);q='('+a+') - ('+b+')';ans=a-b}
+      else{b=-Math.sign(a)*Math.abs(b);q='('+a+') - ('+b+')';ans=a-b}
+    }
+    return{q:q+' = ?',a:ans};
+  }
+  var a=nz(-20,20),b=nz(-20,20),q,ans;
+  switch(lv){
+    case 1:b=Math.sign(a)*Math.abs(b);q='('+a+') + ('+b+')';ans=a+b;break;
+    case 2:b=-Math.sign(a)*Math.abs(b);q='('+a+') + ('+b+')';ans=a+b;break;
+    case 3:b=Math.sign(a)*Math.abs(b);q='('+a+') - ('+b+')';ans=a-b;break;
+    case 4:b=-Math.sign(a)*Math.abs(b);q='('+a+') - ('+b+')';ans=a-b;break;
+  }
+  return{q:q+' = ?',a:ans};
+}
+function genAnswers(correct){
+  var ans=[correct],used={};used[correct]=true;
+  while(ans.length<4){
+    var w=correct+nz(-15,15);
+    if(!used[w]&&w!==correct&&ans.indexOf(w)===-1){ans.push(w);used[w]=true}
+  }
+  for(var i=ans.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=ans[i];ans[i]=ans[j];ans[j]=t}
+  return ans;
+}
+function spawnEnemies(avals){
+  enemies=[];
+  for(var i=0;i<avals.length;i++){
+    enemies.push({x:60+i*120,y:-40-i*30,vx:0,vy:0.8+GS.lv*0.3,val:avals[i],w:50,h:36,alive:true,hit:false});
+  }
+}
+
+// === Drawing ===
+function drawShip(x,y,w,h,color){
+  ctx.fillStyle=color;ctx.strokeStyle='#f8f8f8';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(x,y-h/2);ctx.lineTo(x-w/2,y+h/2);ctx.lineTo(x-w/3,y+h/3);ctx.lineTo(x-w/4,y+h/2);ctx.lineTo(x+w/4,y+h/2);ctx.lineTo(x+w/3,y+h/3);ctx.lineTo(x+w/2,y+h/2);ctx.closePath();
+  ctx.fill();ctx.stroke();
+  ctx.fillStyle='#fcd000';ctx.fillRect(x-4,y-12,8,10);
+  ctx.fillStyle='#ff6600';ctx.fillRect(x-5,y+h/2-2,10,4);
+}
+function drawEnemy(x,y,w,h,val,highlight){
+  ctx.fillStyle=highlight?'#ff6600':'#e60012';ctx.strokeStyle='#f8f8f8';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(x,y-h/2);ctx.lineTo(x+w/2,y);ctx.lineTo(x,y+h/2);ctx.lineTo(x-w/2,y);ctx.closePath();
+  ctx.fill();ctx.stroke();
+  ctx.fillStyle='#f8f8f8';ctx.font='bold 22px "PressStart","Courier New",monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(val,x,y+1);
+}
+function drawBullet(x,y){ctx.fillStyle='#fcd000';ctx.fillRect(x-2,y-6,4,12);ctx.fillStyle='#fff';ctx.fillRect(x-1,y-8,2,6)}
+function drawStar(x,y,s){ctx.fillStyle='rgba(255,255,255,'+(0.4+s*0.3)+')';ctx.fillRect(x,y,s,s)}
+
+function draw(){
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  for(var i=0;i<stars.length;i++){var st=stars[i];drawStar(st.x,st.y,st.s)}
+  for(var i=0;i<treasures.length;i++){
+    var tr=treasures[i];var t=Date.now()/200;
+    ctx.fillStyle='#00ff88';ctx.strokeStyle='#fff';ctx.lineWidth=1;
+    ctx.beginPath();ctx.arc(tr.x,tr.y,10+Math.sin(t+i)*2,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#fff';ctx.font='bold 12px "PressStart","Courier New",monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('P',tr.x,tr.y+1);
+  }
+  for(var i=0;i<enemies.length;i++){
+    var e=enemies[i];if(!e.alive)continue;
+    drawEnemy(e.x,e.y,e.w,e.h,e.val,e.hit);
+  }
+  for(var i=0;i<bullets.length;i++)drawBullet(bullets[i].x,bullets[i].y);
+  if(player.inv%6<3)drawShip(player.x,player.y,player.w,player.h,'#e60012');
+  for(var i=0;i<particles.length;i++){
+    var p=particles[i];ctx.fillStyle='rgba(255,205,0,'+p.life+')';ctx.fillRect(p.x-2,p.y-2,4,4);
+  }
+  if(GS.pmsg){
+    ctx.fillStyle='#fcd000';ctx.font='22px "PressStart","Courier New",monospace';ctx.textAlign='center';
+    ctx.fillText(GS.pmsg,W/2,H/2-40);
+  }
+}
+
+// === Update ===
+function update(){
+  for(var i=0;i<stars.length;i++){stars[i].y+=stars[i].s;if(stars[i].y>800)stars[i].y=-4}
+  if(player.inv>0)player.inv--;
+  if(GS.active&&Math.random()<0.002){
+    treasures.push({x:40+Math.random()*400,y:-20,vy:1.5});
+  }
+  for(var i=treasures.length-1;i>=0;i--){
+    treasures[i].y+=treasures[i].vy;
+    if(treasures[i].y>840){treasures.splice(i,1);continue}
+    var tr=treasures[i];
+    if(Math.abs(tr.x-player.x)<player.w/2+12&&Math.abs(tr.y-player.y)<player.h/2+12){
+      GS.fire=Math.min(GS.fire+1,8);
+      document.getElementById('hud-fire').textContent='Lv'+GS.fire;
+      treasures.splice(i,1);
+    }
+  }
+  for(var i=0;i<enemies.length;i++){
+    var e=enemies[i];if(!e.alive)continue;
+    e.y+=e.vy;e.x+=e.vx;
+    if(e.hit){e.alive=false;continue}
+    if(e.y>840){e.alive=false}
+  }
+  for(var i=bullets.length-1;i>=0;i--){
+    bullets[i].y-=8;
+    if(bullets[i].y<-20){bullets.splice(i,1);continue}
+    for(var j=0;j<enemies.length;j++){
+      var e=enemies[j];if(!e.alive||e.hit)continue;
+      if(Math.abs(bullets[i].x-e.x)<e.w/2+4&&Math.abs(bullets[i].y-e.y)<e.h/2+8){
+        bullets.splice(i,1);
+        hitEnemy(j,e);break;
+      }
+    }
+  }
+  for(var i=particles.length-1;i>=0;i--){particles[i].life-=0.05;if(particles[i].life<=0)particles.splice(i,1)}
+  if(GS.ptimer>0){GS.ptimer--;if(GS.ptimer===0)onPhaseEnd()}
+  if(GS.active&&enemies.every(function(e){return !e.alive})){
+    if(!enemies.some(function(e){return e.hit})){
+      GS.active=false;GS.pmsg='⏰ 時間到！';GS.ptimer=60;
+    }
+  }
+}
+
+function hitEnemy(idx,e){
+  e.hit=true;
+  if(e.val===GS.prob.a){
+    particles.push({x:e.x,y:e.y,life:1});
+    GS.lvs[GS.lv-1]+=5;GS.total+=5;
+    document.getElementById('hud-score').textContent=GS.total;
+    var row={class_name:GS.cls,seat_number:GS.seat,student_name:GS.name,email:GS.email,score:GS.total,level1_score:GS.lvs[0],level2_score:GS.lvs[1],level3_score:GS.lvs[3],level4_score:GS.lvs[3],game_time_seconds:GS.sec};
+    sbInsert(row);
+    GS.active=false;GS.pmsg='✅ 命中！';GS.ptimer=45;
+  }else{
+    GS.active=false;
+    var lvlName=lvNames[GS.lv-1];
+    showAIExplain(GS.prob.q,e.val,GS.prob.a,lvlName);
+  }
+}
+
+function showAIExplain(problem,chosen,correct,levelName){
+  var overlay=document.getElementById('ai-overlay');
+  document.getElementById('ai-title').textContent='❌ 答錯了！';
+  document.getElementById('ai-body').textContent='';
+  document.getElementById('ai-spinner').style.display='block';
+  document.getElementById('ai-dismiss').style.display='none';
+  overlay.classList.add('show');
+  callAI({action:'explain',problem:problem,chosenAnswer:chosen,correctAnswer:correct,levelName:levelName},function(res){
+    document.getElementById('ai-spinner').style.display='none';
+    document.getElementById('ai-body').textContent=res.text||'繼續加油，多練習就會進步！';
+    document.getElementById('ai-dismiss').style.display='inline-block';
+  });
+}
+
+function onPhaseEnd(){
+  GS.pmsg='';
+  if(GS.phaseNext==='level'){
+    GS.phaseNext='';
+    startRound();return;
+  }
+  GS.phaseNext='';
+  if(GS.qn>=5){
+    GS.lv++;GS.qn=1;
+    if(GS.lv>4){endGame();return}
+    document.getElementById('hud-fire').textContent='Lv'+GS.fire;
+    startLevel();
+  }else{
+    GS.qn++;
+    startRound();
+  }
+}
+
+// === Game flow ===
+function startLevel(){
+  GS.active=false;GS.pmsg='第 '+GS.lv+' 關！';GS.ptimer=90;
+  GS.phaseNext='level';
+  document.getElementById('hud-fire').textContent='Lv'+GS.fire;
+  document.getElementById('hud-q').textContent=GS.qn+'/5';
+  document.getElementById('question-bar').textContent=lvNames[GS.lv-1];
+  resetPlayer();
+  enemies=[];bullets=[];
+}
+function startRound(){
+  GS.prob=genProblem(GS.lv);
+  var avals=genAnswers(GS.prob.a);
+  spawnEnemies(avals);
+  document.getElementById('hud-q').textContent=GS.qn+'/5';
+  document.getElementById('question-bar').textContent=GS.prob.q;
+  GS.active=true;
+}
+function fireBullets(){
+  if(!GS.active)return;
+  var f=GS.fire,x=player.x;
+  var offsets=[];
+  if(f===1)offsets=[0];
+  else if(f===2)offsets=[-6,6];
+  else if(f===3)offsets=[-10,0,10];
+  else if(f===4)offsets=[-14,-6,6,14];
+  else if(f===5)offsets=[-16,-8,0,8,16];
+  else if(f===6)offsets=[-20,-10,0,10,20];
+  else if(f===7)offsets=[-22,-12,-4,4,12,22];
+  else offsets=[-24,-16,-8,0,8,16,24];
+  for(var i=0;i<offsets.length;i++)bullets.push({x:x+offsets[i],y:player.y-20});
+}
+
+// === Levels ===
+var lvNames=['第一關：同號數相加','第二關：異號數相加','第三關：同號數相減','第四關：異號數相減'];
+
+// === AI Question Generation ===
+function aiGenerate(){
+  var req=document.getElementById('ai-request').value.trim();
+  if(!req){document.getElementById('ai-status').textContent='請輸入你想練習的內容';return}
+  document.getElementById('ai-status').textContent='🤖 AI 老師出題中...';
+  document.getElementById('ai-result').textContent='';
+  callAI({action:'generate',userRequest:req},function(res){
+    document.getElementById('ai-status').textContent='';
+    if(res.levels&&res.levels.length>=1){
+      GS.customLevels=res;
+      var lines=[];
+      for(var i=0;i<res.levels.length;i++){
+        var lv=res.levels[i];
+        lvNames[i]=lv.name||('第'+(i+1)+'關');
+        lines.push((i+1)+'. '+lvNames[i]+(lv.prompt?'：'+lv.prompt:''));
+      }
+      // Pad to 4 levels
+      while(lvNames.length<4)lvNames.push('第'+(lvNames.length+1)+'關');
+      while((res.levels).length<4)res.levels.push({nums:[-20,20],ops:'both'});
+      document.getElementById('ai-result').innerHTML='✅ AI 已出題！<br>'+lines.join('<br>');
+    }else{
+      document.getElementById('ai-result').textContent='AI 無法理解，請換個說法再試試';
+    }
+  });
+}
+
+// === Timer ===
+function updTimer(){GS.sec++;var m=Math.floor(GS.sec/60),s=GS.sec%60;document.getElementById('hud-time').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')}
+
+// === Input ===
+var keys={};
+document.addEventListener('keydown',function(e){keys[e.key]=true;if(e.key===' '||e.key==='Spacebar'){e.preventDefault();fireBullets()}});
+document.addEventListener('keyup',function(e){keys[e.key]=false});
+function handleInput(){
+  if(!GS.active&&GS.ptimer>0)return;
+  if(keys['ArrowLeft']||keys['a'])player.x-=player.speed;
+  if(keys['ArrowRight']||keys['d'])player.x+=player.speed;
+  if(keys['ArrowUp']||keys['w'])player.y-=player.speed;
+  if(keys['ArrowDown']||keys['s'])player.y+=player.speed;
+  player.x=Math.max(20,Math.min(460,player.x));
+  player.y=Math.max(500,Math.min(760,player.y));
+}
+var mtouches={};
+['mleft','mright','mup','mdown','mfire'].forEach(function(id){
+  var el=document.getElementById(id);
+  el.addEventListener('touchstart',function(e){e.preventDefault();mtouches[id]=true;if(id==='mfire')fireBullets()});
+  el.addEventListener('touchend',function(e){e.preventDefault();mtouches[id]=false});
+  el.addEventListener('mousedown',function(e){mtouches[id]=true;if(id==='mfire')fireBullets()});
+  el.addEventListener('mouseup',function(e){mtouches[id]=false});
+});
+function handleMobile(){
+  if(mtouches['mleft'])player.x-=player.speed;
+  if(mtouches['mright'])player.x+=player.speed;
+  if(mtouches['mup'])player.y-=player.speed;
+  if(mtouches['mdown'])player.y+=player.speed;
+}
+
+// === Game loop ===
+function loop(){
+  handleInput();handleMobile();
+  update();draw();requestAnimationFrame(loop);
+}
+
+var regPanel,resPanel;
+function startGame(){
+  var a=document.getElementById('reg-cls').value.trim();
+  var b=parseInt(document.getElementById('reg-seat').value);
+  var c=document.getElementById('reg-name').value.trim();
+  var d=document.getElementById('reg-email').value.trim();
+  if(!a){alert('請輸入班級');return}if(!b||b<1){alert('請輸入正確的座號');return}
+  if(!c){alert('請輸入姓名');return}if(!d){alert('請輸入 E-mail');return}
+  GS.cls=a;GS.seat=b;GS.name=c;GS.email=d;
+  GS.lv=1;GS.qn=1;GS.lvs=[0,0,0,0];GS.total=0;GS.sec=0;GS.fire=1;GS.phaseNext='';treasures=[];
+  if(!GS.customLevels){
+    lvNames=['第一關：同號數相加','第二關：異號數相加','第三關：同號數相減','第四關：異號數相減'];
+  }
+  document.getElementById('hud-score').textContent='0';
+  document.getElementById('hud-time').textContent='00:00';
+  document.getElementById('hud-fire').textContent='Lv1';
+  document.getElementById('hud-q').textContent='1/5';
+  document.getElementById('panel').classList.add('hidden');
+  document.getElementById('hud').style.display='flex';
+  if(GS.timer)clearInterval(GS.timer);
+  GS.timer=setInterval(updTimer,1000);
+  initStars();
+  resetPlayer();
+  startLevel();
+  resize();
+}
+
+function endGame(){
+  if(GS.timer)clearInterval(GS.timer);
+  var sec=GS.sec,m=Math.floor(sec/60),s=sec%60;
+  GS.active=false;enemies=[];bullets=[];
+  document.getElementById('panel').classList.remove('hidden');
+  regPanel=document.getElementById('panel-reg');
+  resPanel=document.getElementById('panel-result');
+  regPanel.classList.add('hidden');resPanel.classList.remove('hidden');
+  document.getElementById('total-score').textContent=GS.total+' / 100 分';
+  document.getElementById('total-time').textContent=m+' 分 '+s+' 秒';
+  var lb=GS.customLevels?lvNames:['同號相加','異號相加','同號相減','異號相減'],h='';
+  for(var i=0;i<4;i++)h+='<div class="res-card"><div class="lbl">'+(lb[i]||('第'+(i+1)+'關'))+'</div><div class="val">'+GS.lvs[i]+' / 25</div></div>';
+  document.getElementById('res-grid').innerHTML=h;
+  var sel;
+  if(GS.total>=90)sel='🏆 太神了！你就是神鷹一號的王牌飛行員！';
+  else if(GS.total>=70)sel='💪 不錯的戰績！繼續訓練，成為更強的飛行員！';
+  else if(GS.total>=50)sel='🔧 還不錯！多出擊幾次，反應會越來越快！';
+  else if(GS.total>=30)sel='📡 別氣餒！王牌飛行員也是從墜機中學到經驗的！';
+  else sel='⚡ 繼續加油！每一次出擊都是成長的機會！';
+  document.getElementById('sel-msg').textContent=sel;
+  var row={class_name:GS.cls,seat_number:GS.seat,student_name:GS.name,email:GS.email,score:GS.total,level1_score:GS.lvs[0],level2_score:GS.lvs[1],level3_score:GS.lvs[2],level4_score:GS.lvs[3],game_time_seconds:sec};
+  sbInsert(row);
+  sendMail({student_name:GS.name,student_email:GS.email,score:GS.total,level1_score:GS.lvs[0],level2_score:GS.lvs[1],level3_score:GS.lvs[2],level4_score:GS.lvs[3],game_time:m+' 分 '+s+' 秒'});
+  document.getElementById('lb-body').innerHTML='<tr><td colspan="5">載入中...</td></tr>';
+  sbSelect(function(data){
+    var tb=document.getElementById('lb-body');
+    if(!data||!data.length){tb.innerHTML='<tr><td colspan="5">還沒有出擊紀錄！</td></tr>';return}
+    var html='';
+    for(var i=0;i<data.length;i++){
+      var r=data[i],mm=Math.floor(r.game_time_seconds/60),ss=r.game_time_seconds%60;
+      var rank=i===0?'🥇':i===1?'🥈':i===2?'🥉':String(i+1);
+      html+='<tr><td>'+rank+'</td><td>'+esc(r.class_name)+'</td><td>'+esc(r.student_name)+'</td><td>'+r.score+'</td><td>'+mm+':'+String(ss).padStart(2,'0')+'</td></tr>';
+    }
+    tb.innerHTML=html;
+  });
+  document.getElementById('hud').style.display='none';
+  document.getElementById('question-bar').textContent='';
+}
+
+function esc(t){var d=document.createElement('div');d.textContent=t;return d.innerHTML}
+
+function restartGame(){
+  GS.customLevels=null;
+  lvNames=['第一關：同號數相加','第二關：異號數相加','第三關：同號數相減','第四關：異號數相減'];
+  document.getElementById('ai-result').textContent='';
+  document.getElementById('ai-request').value='';
+  resPanel.classList.add('hidden');regPanel.classList.remove('hidden');
+  document.getElementById('panel').classList.remove('hidden');
+  document.getElementById('reg-cls').value=GS.cls;
+  document.getElementById('reg-seat').value=GS.seat;
+  document.getElementById('reg-name').value=GS.name;
+  document.getElementById('reg-email').value=GS.email;
+}
+
+// Init
+document.getElementById('hud').style.display='none';
+initStars();
+loop();
+</script>
+</body>
+</html>
