@@ -152,7 +152,7 @@ canvas{display:block;width:100%;height:100%;background:#000}
         <div id="ai-status"></div>
         <div id="ai-result"></div>
       </div>
-      <div style="font-size:9px;color:#444;text-align:center;margin-top:8px">v1.3</div>
+      <div style="font-size:9px;color:#444;text-align:center;margin-top:8px">v1.4</div>
       <button class="btn btn-start" onclick="startGame()">🔥 出擊！</button>
     </div>
     <div id="panel-result" class="hidden">
@@ -200,23 +200,15 @@ function sendMail(p){
 
 // === AI API ===
 function callAI(payload,cb){
-  document.getElementById('ai-spinner').style.display='block';
-  document.getElementById('ai-body').textContent='';
-  document.getElementById('ai-dismiss').style.display='none';
   fetch(AI_URL,{
     method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify(payload)
-  }).then(function(r){return r.json()})
+  }).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()})
   .then(function(d){cb(d)})
-  .catch(function(e){cb({text:'AI 老師暫時離線，請稍後再試！'})});
+  .catch(function(e){cb({text:''})});
 }
 
-function dismissAI(){
-  var overlay=document.getElementById('ai-overlay');
-  if(overlay){overlay.style.display='none';overlay.classList.remove('show');}
-  if(window.aiFallbackTimer)clearTimeout(window.aiFallbackTimer);
-  onPhaseEnd();
-}
+
 
 // === Canvas ===
 var cv=document.getElementById('c'),ctx=cv.getContext('2d');
@@ -397,39 +389,44 @@ function hitEnemy(idx,e){
     var row={class_name:GS.cls,seat_number:GS.seat,student_name:GS.name,email:GS.email,score:GS.total,level1_score:GS.lvs[0],level2_score:GS.lvs[1],level3_score:GS.lvs[2],level4_score:GS.lvs[3],game_time_seconds:GS.sec};
     sbInsert(row);
     GS.active=false;GS.pmsg='✅ 命中！';GS.ptimer=45;
+    hideWrongOverlay();
   }else{
     GS.active=false;
-    var lvlName=lvNames[GS.lv-1];
-    showAIExplain(GS.prob.q,e.val,GS.prob.a,lvlName);
+    showWrongAnswer(e.val);
   }
 }
 
-function showAIExplain(problem,chosen,correct,levelName){
-  var overlay=document.getElementById('ai-overlay');
-  if(!overlay){console.warn('ai-overlay not found');onPhaseEnd();return}
-  document.getElementById('ai-title').textContent='❌ 答錯了！AI 老師來幫你';
-  var body='<div style="font-size:20px;color:#fcd000;margin-bottom:16px">'+esc(problem)+'</div>';
-  body+='<div style="font-size:14px;color:#ccc;margin-bottom:12px">你選了：<span style="color:#ff6666;font-size:18px">'+chosen+'</span>　正確答案：<span style="color:#00ff88;font-size:18px">'+correct+'</span></div>';
-  body+='<div style="font-size:12px;color:#888;margin-bottom:4px">🤖 AI 解釋：</div>';
-  body+='<div id="ai-explain-text" style="margin-top:4px;color:#f8f8f8;font-size:16px;line-height:1.6;min-height:24px"></div>';
-  document.getElementById('ai-body').innerHTML=body;
-  document.getElementById('ai-spinner').style.display='block';
-  document.getElementById('ai-dismiss').style.display='none';
-  overlay.style.display='flex';
-  overlay.classList.add('show');
-  // Fallback: auto-dismiss in 30s if stuck
-  if(window.aiFallbackTimer)clearTimeout(window.aiFallbackTimer);
-  window.aiFallbackTimer=setTimeout(function(){if(overlay.style.display==='flex')dismissAI();},30000);
-  callAI({action:'explain',problem:problem,chosenAnswer:chosen,correctAnswer:correct,levelName:levelName},function(res){
-    var explain=document.getElementById('ai-explain-text');
-    if(explain)explain.textContent=res.text||'繼續加油，多練習就會進步！';
-    document.getElementById('ai-spinner').style.display='none';
-    document.getElementById('ai-dismiss').style.display='inline-block';
+// === Wrong Answer Overlay (uses #msg-overlay) ===
+var gWrongTimer=null;
+function showWrongAnswer(chosenVal){
+  var mo=document.getElementById('msg-overlay');
+  var problem=GS.prob.q,correct=GS.prob.a;
+  mo.innerHTML='<div style="font-size:20px;margin-bottom:10px">❌ 答錯了！</div>'+
+    '<div style="font-size:18px;margin-bottom:8px;color:#fff">'+esc(problem)+'</div>'+
+    '<div style="font-size:14px;margin-bottom:6px">你選了 <b style="color:#ff6666">'+chosenVal+'</b>　正確 <b style="color:#00ff88">'+correct+'</b></div>'+
+    '<div id="ai-tip" style="font-size:13px;color:#aff;margin-top:8px;line-height:1.6">🤖 AI 老師思考中...</div>'+
+    '<div style="font-size:10px;color:#666;margin-top:12px">按空白鍵或等待繼續</div>';
+  mo.style.display='block';
+  mo.style.pointerEvents='none';
+  GS.ptimer=240;
+  // Call AI in background
+  var lvlName=lvNames[GS.lv-1];
+  callAI({action:'explain',problem:problem,chosenAnswer:chosenVal,correctAnswer:correct,levelName:lvlName},function(res){
+    var tip=document.getElementById('ai-tip');
+    if(tip)tip.innerHTML='<span style="color:#00ff88">🤖 '+esc(res.text||'')+'</span>';
   });
+  // Space to dismiss
+  gWrongTimer=setTimeout(function(){hideWrongOverlay();onPhaseEnd();},4000);
+}
+function hideWrongOverlay(){
+  var mo=document.getElementById('msg-overlay');
+  mo.style.display='none';
+  if(gWrongTimer){clearTimeout(gWrongTimer);gWrongTimer=null;}
 }
 
 function onPhaseEnd(){
   GS.pmsg='';
+  hideWrongOverlay();
   if(GS.phaseNext==='level'){
     GS.phaseNext='';
     startRound();return;
@@ -513,7 +510,19 @@ function updTimer(){GS.sec++;var m=Math.floor(GS.sec/60),s=GS.sec%60;document.ge
 
 // === Input ===
 var keys={};
-document.addEventListener('keydown',function(e){keys[e.key]=true;if(e.key===' '||e.key==='Spacebar'){e.preventDefault();fireBullets()}});
+document.addEventListener('keydown',function(e){
+  keys[e.key]=true;
+  if(e.key===' '||e.key==='Spacebar'){
+    e.preventDefault();
+    var mo=document.getElementById('msg-overlay');
+    if(mo.style.display==='block'){
+      hideWrongOverlay();
+      onPhaseEnd();
+    }else{
+      fireBullets();
+    }
+  }
+});
 document.addEventListener('keyup',function(e){keys[e.key]=false});
 function handleInput(){
   if(!GS.active&&GS.ptimer>0)return;
