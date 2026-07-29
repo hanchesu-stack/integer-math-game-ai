@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>神鷹一號 AI - 智慧整數加減法射擊</title>
 <style>
 @font-face{font-family:'PressStart';src:local('Courier New')}
@@ -149,6 +152,7 @@ canvas{display:block;width:100%;height:100%;background:#000}
         <div id="ai-status"></div>
         <div id="ai-result"></div>
       </div>
+      <div style="font-size:9px;color:#444;text-align:center;margin-top:8px">v1.2</div>
       <button class="btn btn-start" onclick="startGame()">🔥 出擊！</button>
     </div>
     <div id="panel-result" class="hidden">
@@ -208,7 +212,9 @@ function callAI(payload,cb){
 }
 
 function dismissAI(){
-  document.getElementById('ai-overlay').classList.remove('show');
+  var overlay=document.getElementById('ai-overlay');
+  if(overlay){overlay.style.display='none';overlay.classList.remove('show');}
+  if(window.aiFallbackTimer)clearTimeout(window.aiFallbackTimer);
   onPhaseEnd();
 }
 
@@ -236,10 +242,10 @@ var GS={
 };
 
 // === Entities ===
-var player={x:240,y:620,w:20,h:28,speed:5,inv:0};
+var player={x:240,y:580,w:20,h:28,speed:5,inv:0};
 var enemies=[],bullets=[],stars=[],particles=[],treasures=[];
 
-function resetPlayer(){player.x=240;player.y=620;player.inv=0;bullets=[];}
+function resetPlayer(){player.x=240;player.y=580;player.inv=0;bullets=[];}
 function getFirepower(){return GS.fire;}
 
 // === Stars ===
@@ -386,7 +392,7 @@ function hitEnemy(idx,e){
     particles.push({x:e.x,y:e.y,life:1});
     GS.lvs[GS.lv-1]+=5;GS.total+=5;
     document.getElementById('hud-score').textContent=GS.total;
-    var row={class_name:GS.cls,seat_number:GS.seat,student_name:GS.name,email:GS.email,score:GS.total,level1_score:GS.lvs[0],level2_score:GS.lvs[1],level3_score:GS.lvs[3],level4_score:GS.lvs[3],game_time_seconds:GS.sec};
+    var row={class_name:GS.cls,seat_number:GS.seat,student_name:GS.name,email:GS.email,score:GS.total,level1_score:GS.lvs[0],level2_score:GS.lvs[1],level3_score:GS.lvs[2],level4_score:GS.lvs[3],game_time_seconds:GS.sec};
     sbInsert(row);
     GS.active=false;GS.pmsg='✅ 命中！';GS.ptimer=45;
   }else{
@@ -398,14 +404,23 @@ function hitEnemy(idx,e){
 
 function showAIExplain(problem,chosen,correct,levelName){
   var overlay=document.getElementById('ai-overlay');
+  if(!overlay){console.warn('ai-overlay not found');onPhaseEnd();return}
   document.getElementById('ai-title').textContent='❌ 答錯了！';
-  document.getElementById('ai-body').innerHTML='<div style="font-size:18px;color:#fcd000;margin-bottom:12px">'+esc(problem)+'</div><div style="font-size:12px;color:#888;margin-bottom:4px">你選了：<span style="color:#ff6666">'+chosen+'</span>　正確：<span style="color:#00ff88">'+correct+'</span></div><div id="ai-explain-text" style="margin-top:8px;color:#f8f8f8"></div>';
+  var body='<div style="font-size:18px;color:#fcd000;margin-bottom:12px">'+esc(problem)+'</div>';
+  body+='<div style="font-size:12px;color:#888;margin-bottom:4px">你選了：<span style="color:#ff6666">'+chosen+'</span>　正確：<span style="color:#00ff88">'+correct+'</span></div>';
+  body+='<div id="ai-explain-text" style="margin-top:8px;color:#f8f8f8;line-height:1.6"></div>';
+  document.getElementById('ai-body').innerHTML=body;
   document.getElementById('ai-spinner').style.display='block';
   document.getElementById('ai-dismiss').style.display='none';
+  overlay.style.display='flex';
   overlay.classList.add('show');
+  // Fallback: auto-dismiss in 30s if stuck
+  if(window.aiFallbackTimer)clearTimeout(window.aiFallbackTimer);
+  window.aiFallbackTimer=setTimeout(function(){if(overlay.style.display==='flex')dismissAI();},30000);
   callAI({action:'explain',problem:problem,chosenAnswer:chosen,correctAnswer:correct,levelName:levelName},function(res){
+    var explain=document.getElementById('ai-explain-text');
+    if(explain)explain.textContent=res.text||'繼續加油，多練習就會進步！';
     document.getElementById('ai-spinner').style.display='none';
-    document.getElementById('ai-explain-text').textContent=res.text||'繼續加油，多練習就會進步！';
     document.getElementById('ai-dismiss').style.display='inline-block';
   });
 }
@@ -504,7 +519,7 @@ function handleInput(){
   if(keys['ArrowUp']||keys['w'])player.y-=player.speed;
   if(keys['ArrowDown']||keys['s'])player.y+=player.speed;
   player.x=Math.max(20,Math.min(460,player.x));
-  player.y=Math.max(400,Math.min(720,player.y));
+  player.y=Math.max(360,Math.min(700,player.y));
 }
 var mtouches={};
 ['mleft','mright','mup','mdown','mfire'].forEach(function(id){
