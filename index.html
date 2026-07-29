@@ -236,10 +236,10 @@ var GS={
 };
 
 // === Entities ===
-var player={x:240,y:700,w:20,h:28,speed:5,inv:0};
+var player={x:240,y:620,w:20,h:28,speed:5,inv:0};
 var enemies=[],bullets=[],stars=[],particles=[],treasures=[];
 
-function resetPlayer(){player.x=240;player.y=700;player.inv=0;bullets=[];}
+function resetPlayer(){player.x=240;player.y=620;player.inv=0;bullets=[];}
 function getFirepower(){return GS.fire;}
 
 // === Stars ===
@@ -399,13 +399,13 @@ function hitEnemy(idx,e){
 function showAIExplain(problem,chosen,correct,levelName){
   var overlay=document.getElementById('ai-overlay');
   document.getElementById('ai-title').textContent='❌ 答錯了！';
-  document.getElementById('ai-body').textContent='';
+  document.getElementById('ai-body').innerHTML='<div style="font-size:18px;color:#fcd000;margin-bottom:12px">'+esc(problem)+'</div><div style="font-size:12px;color:#888;margin-bottom:4px">你選了：<span style="color:#ff6666">'+chosen+'</span>　正確：<span style="color:#00ff88">'+correct+'</span></div><div id="ai-explain-text" style="margin-top:8px;color:#f8f8f8"></div>';
   document.getElementById('ai-spinner').style.display='block';
   document.getElementById('ai-dismiss').style.display='none';
   overlay.classList.add('show');
   callAI({action:'explain',problem:problem,chosenAnswer:chosen,correctAnswer:correct,levelName:levelName},function(res){
     document.getElementById('ai-spinner').style.display='none';
-    document.getElementById('ai-body').textContent=res.text||'繼續加油，多練習就會進步！';
+    document.getElementById('ai-explain-text').textContent=res.text||'繼續加油，多練習就會進步！';
     document.getElementById('ai-dismiss').style.display='inline-block';
   });
 }
@@ -504,7 +504,7 @@ function handleInput(){
   if(keys['ArrowUp']||keys['w'])player.y-=player.speed;
   if(keys['ArrowDown']||keys['s'])player.y+=player.speed;
   player.x=Math.max(20,Math.min(460,player.x));
-  player.y=Math.max(500,Math.min(760,player.y));
+  player.y=Math.max(400,Math.min(720,player.y));
 }
 var mtouches={};
 ['mleft','mright','mup','mdown','mfire'].forEach(function(id){
