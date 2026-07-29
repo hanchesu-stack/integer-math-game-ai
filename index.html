@@ -152,7 +152,7 @@ canvas{display:block;width:100%;height:100%;background:#000}
         <div id="ai-status"></div>
         <div id="ai-result"></div>
       </div>
-      <div style="font-size:9px;color:#444;text-align:center;margin-top:8px">v1.4</div>
+      <div style="font-size:9px;color:#444;text-align:center;margin-top:8px">v1.5</div>
       <button class="btn btn-start" onclick="startGame()">🔥 出擊！</button>
     </div>
     <div id="panel-result" class="hidden">
@@ -397,7 +397,6 @@ function hitEnemy(idx,e){
 }
 
 // === Wrong Answer Overlay (uses #msg-overlay) ===
-var gWrongTimer=null;
 function showWrongAnswer(chosenVal){
   var mo=document.getElementById('msg-overlay');
   var problem=GS.prob.q,correct=GS.prob.a;
@@ -405,23 +404,47 @@ function showWrongAnswer(chosenVal){
     '<div style="font-size:18px;margin-bottom:8px;color:#fff">'+esc(problem)+'</div>'+
     '<div style="font-size:14px;margin-bottom:6px">你選了 <b style="color:#ff6666">'+chosenVal+'</b>　正確 <b style="color:#00ff88">'+correct+'</b></div>'+
     '<div id="ai-tip" style="font-size:13px;color:#aff;margin-top:8px;line-height:1.6">🤖 AI 老師思考中...</div>'+
-    '<div style="font-size:10px;color:#666;margin-top:12px">按空白鍵或等待繼續</div>';
+    '<button id="btn-continue" style="margin-top:16px;padding:12px 48px;font-family:inherit;font-size:15px;background:#e60012;color:#f8f8f8;border:2px solid #fcd000;cursor:pointer" onclick="hideWrongOverlay();onPhaseEnd()">繼續 ▶</button>';
   mo.style.display='block';
-  mo.style.pointerEvents='none';
-  GS.ptimer=240;
+  mo.style.pointerEvents='auto';
+  mo.style.background='rgba(0,0,0,0.9)';
+  mo.style.width='100%';
+  mo.style.height='100%';
+  mo.style.display='flex';
+  mo.style.position='fixed';
+  mo.style.top='0';
+  mo.style.left='0';
+  mo.style.right='0';
+  mo.style.bottom='0';
+  mo.style.transform='none';
+  mo.style.zIndex='20';
+  mo.style.flexDirection='column';
+  mo.style.justifyContent='center';
+  mo.style.alignItems='center';
   // Call AI in background
   var lvlName=lvNames[GS.lv-1];
   callAI({action:'explain',problem:problem,chosenAnswer:chosenVal,correctAnswer:correct,levelName:lvlName},function(res){
     var tip=document.getElementById('ai-tip');
     if(tip)tip.innerHTML='<span style="color:#00ff88">🤖 '+esc(res.text||'')+'</span>';
   });
-  // Space to dismiss
-  gWrongTimer=setTimeout(function(){hideWrongOverlay();onPhaseEnd();},4000);
 }
 function hideWrongOverlay(){
   var mo=document.getElementById('msg-overlay');
   mo.style.display='none';
-  if(gWrongTimer){clearTimeout(gWrongTimer);gWrongTimer=null;}
+  mo.style.pointerEvents='none';
+  mo.style.background='';
+  mo.style.width='';
+  mo.style.height='';
+  mo.style.position='';
+  mo.style.top='';
+  mo.style.left='';
+  mo.style.right='';
+  mo.style.bottom='';
+  mo.style.transform='';
+  mo.style.zIndex='';
+  mo.style.flexDirection='';
+  mo.style.justifyContent='';
+  mo.style.alignItems='';
 }
 
 function onPhaseEnd(){
@@ -515,7 +538,7 @@ document.addEventListener('keydown',function(e){
   if(e.key===' '||e.key==='Spacebar'){
     e.preventDefault();
     var mo=document.getElementById('msg-overlay');
-    if(mo.style.display==='block'){
+    if(mo.style.display!=='none'&&mo.style.display!==''){
       hideWrongOverlay();
       onPhaseEnd();
     }else{
